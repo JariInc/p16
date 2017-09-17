@@ -25,6 +25,13 @@
       autoremove: yes
       cache_valid_time: 86400
 
+  - name: Run setcap on boot
+    lineinfile:
+      path: /etc/rc.local
+      state: present
+      line: 'setcap cap_net_raw+eip $(eval readlink -f `which node`)'
+      insertbefore: exit 0
+
   - name: Reboot
     include_role:
       name: GROG.reboot
@@ -46,6 +53,7 @@
      - nfs-common
      - build-essential
      - git
+     - libcap2-bin
 
   - name: Install nodejs
     unarchive:
