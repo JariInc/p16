@@ -1,0 +1,86 @@
+---
+- hosts: minibians
+  remote_user: root
+  gather_facts: False
+  pre_tasks:
+    - name: Install python for Ansible
+      raw: test -e /usr/bin/python || (apt -y update && apt install -y python-minimal)
+      changed_when: False
+    - setup: # aka gather_facts
+  tasks:
+  - name: Install raspi-config
+    apt:
+      name: "raspi-config"
+      state: present
+
+  - name: Expand rootfs
+    include_role:
+      name: charleskorn.raspi-expanded-rootfs
+    register: expand
+
+  - name: Upgrade apt packages
+    apt:
+      upgrade: dist
+      autoclean: yes
+      autoremove: yes
+      cache_valid_time: 86400
+
+  - name: Reboot
+    include_role:
+      name: GROG.reboot
+    vars:
+      reboot_wait: yes
+
+  - name: Install apt packages
+    apt:
+      name: "{{ item }}"
+      state: present
+      autoclean: yes
+      autoremove: yes
+      cache_valid_time: 86400
+    with_items:
+     - bluetooth
+     - bluez
+     - libbluetooth-dev
+     - libudev-dev
+     - nfs-common
+     - build-essential
+     - git
+
+  - name: Install nodejs
+    unarchive:
+      src: https://nodejs.org/dist/v8.5.0/node-v8.5.0-linux-armv6l.tar.xz
+      dest: /tmp
+      remote_src: yes
+
+  - name: Copy nodejs to /usr/local
+    command: cp -a /tmp/node-v8.5.0-linux-armv6l/{{ item }} /usr/local
+    with_items:
+     - bin
+     - include
+     - lib
+     - share
+
+  - name: Clean up nodejs temp files
+    file:
+      path: /tmp/node-v8.5.0-linux-armv6l
+      state: absent
+
+  - name: Mount NFS share
+    mount:
+      path: /mnt/nfs
+      src: asustor:/volume1/ruuvi
+      fstype: nfs
+      opts: rw,rsize=8192,wsize=8192,timeo=14,_netdev
+      state: mounted
+
+  - name: Fetch source code
+    git:
+      repo: 'https://github.com/JariInc/p16.git'
+      dest: /mnt/nfs
+      version: master
+
+  - name: Install dependencies
+    command: npm install
+    args:
+      chdir: /mnt/nfs/datasource/ruuvitag-raspi
