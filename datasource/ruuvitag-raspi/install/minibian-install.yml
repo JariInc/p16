@@ -92,3 +92,9 @@
     command: npm install
     args:
       chdir: /mnt/nfs/datasource/ruuvitag-raspi
+
+  - name: Start on boot
+    cron:
+      name: ruuvitag-raspi
+      special_time: reboot
+      job: "node /mnt/nfs/datasource/ruuvitag-raspi/main.js"
