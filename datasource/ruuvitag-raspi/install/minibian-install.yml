@@ -54,6 +54,7 @@
      - build-essential
      - git
      - libcap2-bin
+     - supervisor
 
   - name: Install nodejs
     unarchive:
@@ -93,8 +94,10 @@
     args:
       chdir: /mnt/nfs/datasource/ruuvitag-raspi
 
-  - name: Start on boot
-    cron:
-      name: ruuvitag-raspi
-      special_time: reboot
-      job: "node /mnt/nfs/datasource/ruuvitag-raspi/main.js"
+  - name: Copy supervisord config
+    copy:
+      src: supervisor-proc.conf
+      dest: /etc/supervisor/conf.d/ruuvitag.conf
+      owner: root
+      group: root
+      mode: 0644
