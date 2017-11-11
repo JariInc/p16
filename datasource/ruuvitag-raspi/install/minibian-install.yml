@@ -38,6 +38,11 @@
     vars:
       reboot_wait: yes
 
+  - name: Stop existing supervisord
+    service:
+      name: supervisor
+      state: stopped
+
   - name: Install apt packages
     apt:
       name: "{{ item }}"
@@ -101,3 +106,8 @@
       owner: root
       group: root
       mode: 0644
+
+  - name: Start supervisord
+    service:
+      name: supervisor
+      state: started
