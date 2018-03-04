@@ -1,3 +1,10 @@
+# TODO
+
+* ECS data to EFS
+* Grafana container
+* Backup to S3
+* Split ECS stack
+
 # VPC stack
 
 ## Create stack
