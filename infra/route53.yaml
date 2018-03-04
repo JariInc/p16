@@ -1,0 +1,38 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Parameters:
+  DomainName:
+    Type: String
+    Default: poyta16.com
+  ACMValidationSubdomain:
+    Type: String
+  ACMValidationCNAME:
+    Type: String
+Resources:
+  Zone:
+    Type: "AWS::Route53::HostedZone"
+    Properties:
+      Name: !Ref DomainName
+  DNSRecordSet:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneId: !Ref Zone
+      RecordSets:
+      - Name: !Join ['', [!Ref 'DomainName', .]]
+        Type: A
+        AliasTarget:
+          HostedZoneId: !ImportValue ECSLoadBalancerZoneID
+          DNSName:  !ImportValue ECSLoadBalancerDNSName
+      - Name: !Join ['', ['www', ., !Ref 'DomainName', .]]
+        Type: A
+        AliasTarget:
+          HostedZoneId: !ImportValue ECSLoadBalancerZoneID
+          DNSName:  !ImportValue ECSLoadBalancerDNSName
+      - Name: !Join ['', ['influxdb', ., !Ref 'DomainName', .]]
+        Type: A
+        AliasTarget:
+          HostedZoneId: !ImportValue ECSLoadBalancerZoneID
+          DNSName:  !ImportValue ECSLoadBalancerDNSName
+      - Name: !Join ['', [ !Ref ACMValidationSubdomain, ., !Ref 'DomainName', .]]
+        Type: CNAME
+        ResourceRecords: [ !Ref ACMValidationCNAME ]
+        TTL: 600
