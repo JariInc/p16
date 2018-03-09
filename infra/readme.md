@@ -1,9 +1,9 @@
 # TODO
 
-* ECS data to EFS
 * Grafana container
-* Backup to S3
+* Backup to EFS
 * Split ECS stack
+* Telegraf on node
 
 # VPC stack
 
