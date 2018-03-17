@@ -1,0 +1,38 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Resources:
+  EFS:
+    Type: 'AWS::EFS::FileSystem'
+    Properties:
+      PerformanceMode: generalPurpose
+  EFSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !ImportValue 'VPCid'
+      GroupDescription: Security group for EFS
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: '2049'
+        ToPort: '2049'
+        CidrIp: !ImportValue 'VPCCIDR'
+  MountTargetSubnet1:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId:
+        Ref: EFS
+      SubnetId: !Select [0, !Split [',', !ImportValue 'SubnetList']]
+      SecurityGroups:
+      - Ref: EFSSecurityGroup
+  MountTargetSubnet2:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId:
+        Ref: EFS
+      SubnetId: !Select [1, !Split [',', !ImportValue 'SubnetList']]
+      SecurityGroups:
+      - Ref: EFSSecurityGroup
+Outputs:
+  DNS:
+    # file-system-id.efs.aws-region.amazonaws.com
+    Value: !Join [ '.', [ !Ref 'EFS', 'efs', !Ref 'AWS::Region', 'amazonaws.com' ] ]
+    Export:
+      Name: EFSDNSName
