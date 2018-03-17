@@ -29,22 +29,6 @@ Resources:
       Tags:
         - Key: Name
           Value: p16 ECS Security Group
-  ECSsSecurityGroupHTTPSinbound:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      GroupId: !Ref 'ECSSecurityGroup'
-      IpProtocol: tcp
-      FromPort: 443
-      ToPort: 443
-      CidrIp: 0.0.0.0/0
-  ECSsSecurityGroupInfluxDBinbound:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      GroupId: !Ref 'ECSSecurityGroup'
-      IpProtocol: tcp
-      FromPort: 8086
-      ToPort: 8086
-      CidrIp: 0.0.0.0/0
   ECSSecurityGroupSSHinbound:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
@@ -53,6 +37,14 @@ Resources:
       FromPort: 22
       ToPort: 22
       CidrIp: 0.0.0.0/0
+  ECSSecurityGroupALBSG:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref 'ECSSecurityGroup'
+      IpProtocol: tcp
+      FromPort: 32768   
+      ToPort: 61000
+      SourceSecurityGroupId: !ImportValue 'ALBSecurityGroupId'
   CloudWatchLogsGroup:
     Type: AWS::Logs::LogGroup
     Properties:

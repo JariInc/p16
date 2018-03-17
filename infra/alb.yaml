@@ -12,15 +12,14 @@ Resources:
       Tags:
         - Key: Name
           Value: p16 ALB Security Group
-
-  ALBSecurityGroupALBports:
+  ALBSecurityGroupInfluxDBinbound:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       GroupId: !Ref 'ALBSecurityGroup'
       IpProtocol: tcp
-      FromPort: 32768   
-      ToPort: 61000
-      SourceSecurityGroupId: !Ref 'ALBSecurityGroup'
+      FromPort: 8086
+      ToPort: 8086
+      CidrIp: 0.0.0.0/0
   ECSALB:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
@@ -83,3 +82,7 @@ Outputs:
     Value: !Ref InfluxDBTG
     Export:
       Name: InfluxDBTargetGroupARN
+  ALBSecurityGroup:
+    Value: !Ref ALBSecurityGroup
+    Export:
+      Name: ALBSecurityGroupId
