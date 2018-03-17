@@ -97,7 +97,12 @@ Outputs:
     Export:
       Name: VPCid
   Subnets:
-    Description: A list of subnets
+    Description: A list of subnet resource ids
     Value: !Join [ ",", [ !Ref Subnet1, !Ref Subnet2 ]]
     Export:
       Name: SubnetList
+  VPCCIDR:
+    Description: VPC CIDR block
+    Value: !GetAtt VPC.CidrBlock
+    Export:
+      Name: VPCCIDR
