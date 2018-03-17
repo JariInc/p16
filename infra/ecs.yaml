@@ -50,6 +50,7 @@ Resources:
     Properties:
       LogGroupName: !Ref "AWS::StackName"
       RetentionInDays: 14
+  # InfluxDB
   InfluxDBTask:
     Type: AWS::ECS::TaskDefinition
     Properties:
@@ -89,6 +90,55 @@ Resources:
         TargetGroupArn: !ImportValue 'InfluxDBTargetGroupARN'
       Role: !Ref 'ECSServiceRole'
       TaskDefinition: !Ref 'InfluxDBTask'
+  # Grafana
+  GrafanaTask:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+      - Name: grafana
+        MemoryReservation: 100
+        Essential: true
+        Image: grafana/grafana:5.0.3
+        Environment:
+        - Name: GF_SERVER_ROOT_URL
+          Value: !Sub
+          - https://grafana.${Domain}
+          - { Domain: !ImportValue DomainName }
+        - Name: GF_SERVER_PROTOCOL
+          Value: http
+        - Name: GF_SECURITY_ADMIN_USER
+          Value: root
+        - Name: GF_SECURITY_LOGIN_REMEMBER_DAYS
+          Value: 28
+        - Name: GF_SESSION_PROVIDER
+          Value: memory
+        LogConfiguration:
+          LogDriver: awslogs
+          Options:
+            awslogs-group: !Ref 'CloudWatchLogsGroup'
+            awslogs-region: !Ref 'AWS::Region'
+            awslogs-stream-prefix: grafana
+        MountPoints:
+        - ContainerPath: /var/lib/grafana
+          SourceVolume: grafana-data
+        PortMappings:
+        - ContainerPort: 3000
+      Volumes:
+      - Name: grafana-data
+        Host: 
+          SourcePath: /data/grafana
+  GrafanaService:
+    Type: AWS::ECS::Service
+    Properties:
+      Cluster: !Ref 'ECSCluster'
+      DesiredCount: 1
+      LoadBalancers:
+      - ContainerName: grafana
+        ContainerPort: 3000
+        TargetGroupArn: !ImportValue 'GrafanaTargetGroupARN'
+      Role: !Ref 'ECSServiceRole'
+      TaskDefinition: !Ref 'GrafanaTask'
+
   ECSAutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:

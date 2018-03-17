@@ -32,7 +32,17 @@ Resources:
         AliasTarget:
           HostedZoneId: !ImportValue ECSLoadBalancerZoneID
           DNSName:  !ImportValue ECSLoadBalancerDNSName
+      - Name: !Join ['', ['grafana', ., !Ref 'DomainName', .]]
+        Type: A
+        AliasTarget:
+          HostedZoneId: !ImportValue ECSLoadBalancerZoneID
+          DNSName:  !ImportValue ECSLoadBalancerDNSName
       - Name: !Join ['', [ !Ref ACMValidationSubdomain, ., !Ref 'DomainName', .]]
         Type: CNAME
         ResourceRecords: [ !Ref ACMValidationCNAME ]
         TTL: 600
+Outputs:
+  LoadBalancerNameID:
+    Value: !Ref DomainName
+    Export:
+      Name: DomainName
