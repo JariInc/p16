@@ -49,3 +49,11 @@
 ## Create change set
 
 `aws cloudformation create-change-set --stack-name p16-route53 --template-body file://route53.yaml --parameters file://route53-parameters.json --change-set-name Foo`
+
+# Cognito stack
+
+`aws cloudformation create-stack --stack-name p16-cognito --template-body file://cognito.yaml`
+
+## Create change set
+
+`aws cloudformation create-change-set --stack-name p16-route53 --template-body file://cognito.yaml --change-set-name Foo`
