@@ -1,7 +1,6 @@
 # TODO
 
 * Grafana container
-* Backup to EFS
 * Split ECS stack
 * Telegraf on node
 
@@ -22,6 +21,16 @@
 ## Create change set
 
 `aws cloudformation create-change-set --stack-name p16-efs --template-body file://efs.yaml --change-set-name Foo`
+
+# ALB stack
+
+## Create stack
+
+`aws cloudformation create-stack --stack-name p16-alb --capabilities CAPABILITY_IAM --template-body file://alb.yaml --parameters file://alb-parameters.json`
+
+## Create change set
+
+`aws cloudformation create-change-set --stack-name p16-alb --capabilities CAPABILITY_IAM --template-body file://alb.yaml --parameters file://alb-parameters.json --change-set-name Foo`
 
 # ECS stack
 

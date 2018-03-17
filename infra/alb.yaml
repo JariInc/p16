@@ -1,0 +1,85 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Parameters:
+  ALBCertificateArn:
+    Type: String
+    Description: ARN for ACM certificate to be used in load balancer
+Resources:
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: ALB Security Group
+      VpcId: !ImportValue 'VPCid'
+      Tags:
+        - Key: Name
+          Value: p16 ALB Security Group
+
+  ALBSecurityGroupALBports:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref 'ALBSecurityGroup'
+      IpProtocol: tcp
+      FromPort: 32768   
+      ToPort: 61000
+      SourceSecurityGroupId: !Ref 'ALBSecurityGroup'
+  ECSALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: ECSALB
+      Scheme: internet-facing
+      LoadBalancerAttributes:
+      - Key: idle_timeout.timeout_seconds
+        Value: 30
+      Subnets: !Split [ "," , !ImportValue 'SubnetList']
+      SecurityGroups: [!Ref 'ALBSecurityGroup']
+  ALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+      - Type: forward
+        TargetGroupArn: !Ref 'InfluxDBTG'
+      LoadBalancerArn: !Ref 'ECSALB'
+      Port: 8086
+      Protocol: HTTPS
+      Certificates:
+      - CertificateArn: !Ref ALBCertificateArn
+  InfluxDBALBListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    DependsOn: ALBListener
+    Properties:
+      Actions:
+      - Type: forward
+        TargetGroupArn: !Ref 'InfluxDBTG'
+      Conditions:
+      - Field: host-header
+        Values: [influxdb.*]
+      ListenerArn: !Ref 'ALBListener'
+      Priority: 1
+  InfluxDBTG:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    DependsOn: ECSALB
+    Properties:
+      HealthCheckIntervalSeconds: 10
+      HealthCheckPath: /ping
+      HealthCheckProtocol: HTTP
+      HealthCheckPort: traffic-port
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      Matcher:
+        HttpCode: 204
+      Port: 8086
+      Protocol: HTTP
+      UnhealthyThresholdCount: 2
+      VpcId: !ImportValue 'VPCid'
+Outputs:
+  LoadBalancerNameID:
+    Value: !GetAtt ECSALB.CanonicalHostedZoneID
+    Export:
+      Name: ECSLoadBalancerZoneID
+  LoadBalancerDNSName:
+    Value: !GetAtt ECSALB.DNSName
+    Export:
+      Name: ECSLoadBalancerDNSName
+  InfluxDBTG:
+    Value: !Ref InfluxDBTG
+    Export:
+      Name: InfluxDBTargetGroupARN
