@@ -213,6 +213,9 @@ Resources:
               'ecs:Poll', 'ecs:RegisterContainerInstance', 'ecs:StartTelemetrySession',
               'ecs:Submit*', 'logs:CreateLogStream', 'logs:PutLogEvents']
             Resource: '*'
+          - Effect: Allow
+            Action: ['cloudwatch:Get*', 'cloudwatch:List*']
+            Resource: '*'
   AutoscalingRole:
     Type: AWS::IAM::Role
     Properties:
