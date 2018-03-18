@@ -1,9 +1,3 @@
-# TODO
-
-* Grafana container
-* Split ECS stack
-* Telegraf on node
-
 # VPC stack
 
 ## Create stack

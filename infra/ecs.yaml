@@ -4,6 +4,9 @@ Parameters:
   KeyName:
     Type: AWS::EC2::KeyPair::KeyName
     Description: Name of an existing EC2 KeyPair to enable SSH access to the ECS instances.
+  InfluxDBTelegrafPassword:
+    Type: String
+    Description: InfluxDB password for telegfaf user
   InstanceType:
     Description: EC2 instance type
     Type: String
@@ -173,8 +176,34 @@ Resources:
               chown ec2-user:ec2-user $MOUNT_POINT
               echo ${EFSDNSName}:/ $MOUNT_POINT nfs4 nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,_netdev 0 0 >> /etc/fstab
               mount -a -t nfs4
+              curl -o telegraf.rpm https://dl.influxdata.com/telegraf/releases/telegraf-1.5.3-1.x86_64.rpm
+              yum localinstall -y telegraf.rpm
+              cat > /etc/telegraf/telegraf.conf <<- EOM
+              [agent]
+              interval = "60s"
+              [[outputs.influxdb]]
+              urls = ["https://influxdb.${Domain}:8086"]
+              database = "telegraf"
+              username = "telegraf"
+              password = "${InfluxDBTelegrafPassword}"
+              [[inputs.cpu]]
+              [[inputs.disk]]
+              ignore_fs = ["tmpfs", "devtmpfs", "devfs"]
+              [[inputs.diskio]]
+              [[inputs.docker]]
+              [[inputs.influxdb]]
+              urls = ["https://influxdb.${Domain}:8086/debug/vars"]
+              [[inputs.mem]]
+              [[inputs.net]]
+              [[inputs.swap]]
+              [[inputs.kernel]]
+              [[inputs.processes]]
+              [[inputs.system]]
+              [[inputs.netstat]]
+              EOM
+              service telegraf start
               /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource ECSAutoScalingGroup --region ${AWS::Region}
-            - EFSDNSName: !ImportValue EFSDNSName
+            - { EFSDNSName: !ImportValue EFSDNSName, Domain: !ImportValue DomainName }
   ECSServiceRole:
     Type: AWS::IAM::Role
     Properties:
