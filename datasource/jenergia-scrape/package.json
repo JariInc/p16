@@ -7,7 +7,7 @@
     "start": "babel-node src/main.js",
     "prebuild": "rm -rf dist; mkdir dist",
     "build": "webpack --mode production",
-    "create-stack": "npm run build && aws cloudformation package --template-file dist/aws-lambda.yaml --output-template-file ../../infra/lambda/jenergia-scrape.yaml --s3-bucket p16-lambda-jenergia-scrape"
+    "create-stack": "npm run build && aws cloudformation package --template-file dist/aws-lambda.yaml --output-template-file ../../infra/lambda/jenergia-scrape.yaml --s3-bucket p16-lambda"
   },
   "author": "",
   "license": "MIT",
