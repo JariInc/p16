@@ -59,3 +59,10 @@ Resources:
       Parameters:
         ACMValidationSubdomain: !Ref DomainValidataionSubdomain
         ACMValidationCNAME: !Ref DomainValidataionCNAME
+  # JenergiaScrapeLambda:
+  #   Type: AWS::CloudFormation::Stack
+  #   DependsOn:
+  #     - ALBStack
+  #     - ECSStack
+  #   Properties:
+  #     TemplateURL: !Sub 'https://s3-eu-west-1.amazonaws.com/${TemplateBucket}/lambda/jenergia-scrape.yaml'
