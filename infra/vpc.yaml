@@ -1,0 +1,106 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Parameters:
+  VPCCIDR:
+    Description: CIDR for VPC
+    Type: String
+    Default: 10.0.0.0/16
+  Subnet1CIRD:
+    Description: CIDR for Subnet 1
+    Type: String
+    Default: 10.0.0.0/19
+  Subnet1AZ:
+    Description: Availability zone for Subnet 1
+    Type: String
+    Default: "eu-west-1a"
+  Subnet2CIRD:
+    Description: CIDR for Subnet 2
+    Type: String
+    Default: 10.0.32.0/19
+  Subnet2AZ:
+    Description: Availability zone for Subnet 2
+    Type: String
+    Default: "eu-west-1b"
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VPCCIDR
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      InstanceTenancy: default
+      Tags:
+        - Key: Name
+          Value: p16 VPC
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: p16 Internet Gateway
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+  Subnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Ref Subnet1AZ
+      CidrBlock: !Ref Subnet1CIRD
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: p16 Subnet 1
+  Subnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Ref Subnet2AZ
+      CidrBlock: !Ref Subnet2CIRD
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: p16 Subnet 2
+  RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: p16 Public Routes
+  DefaultRoute:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+  Subnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTable
+      SubnetId: !Ref Subnet1
+  Subnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTable
+      SubnetId: !Ref Subnet2
+Outputs:
+  VPCid:
+    Description: VPC resource id
+    Value: !Ref VPC
+    Export:
+      Name: VPCid
+  Subnets:
+    Description: A list of subnet resource ids
+    Value: !Join [ ",", [ !Ref Subnet1, !Ref Subnet2 ]]
+    Export:
+      Name: SubnetList
+  VPCCIDR:
+    Description: VPC CIDR block
+    Value: !GetAtt VPC.CidrBlock
+    Export:
+      Name: VPCCIDR

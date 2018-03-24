@@ -1,0 +1,277 @@
+# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/quickref-ecs.html#quickref-ecs-example-1.yaml
+AWSTemplateFormatVersion: '2010-09-09'
+Parameters:
+  KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the ECS instances.
+  InfluxDBTelegrafPassword:
+    Type: String
+    Description: InfluxDB password for telegraf-user
+  InstanceType:
+    Description: EC2 instance type
+    Type: String
+    Default: t2.micro
+    AllowedValues: [t2.micro, t2.small, t2.medium, t2.large, m3.medium, m3.large,
+      m3.xlarge, m3.2xlarge, m4.large, m4.xlarge, m4.2xlarge, m4.4xlarge, m4.10xlarge,
+      c4.large, c4.xlarge, c4.2xlarge, c4.4xlarge, c4.8xlarge, c3.large, c3.xlarge,
+      c3.2xlarge, c3.4xlarge, c3.8xlarge, r3.large, r3.xlarge, r3.2xlarge, r3.4xlarge,
+      r3.8xlarge, i2.xlarge, i2.2xlarge, i2.4xlarge, i2.8xlarge]
+    ConstraintDescription: Please choose a valid instance type.
+Mappings:
+  AWSRegionToAMI:
+    eu-west-1:
+      AMIID: ami-0693ed7f
+Resources:
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+  ECSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: ECS Security Group
+      VpcId: !ImportValue 'VPCid'
+      Tags:
+        - Key: Name
+          Value: p16 ECS Security Group
+  ECSSecurityGroupSSHinbound:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref 'ECSSecurityGroup'
+      IpProtocol: tcp
+      FromPort: 22
+      ToPort: 22
+      CidrIp: 0.0.0.0/0
+  ECSSecurityGroupALBSG:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref 'ECSSecurityGroup'
+      IpProtocol: tcp
+      FromPort: 32768   
+      ToPort: 61000
+      SourceSecurityGroupId: !ImportValue 'ALBSecurityGroupId'
+  CloudWatchLogsGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Ref "AWS::StackName"
+      RetentionInDays: 14
+  # InfluxDB
+  InfluxDBTask:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+      - Name: influxdb
+        MemoryReservation: 300
+        Essential: true
+        Image: influxdb:1.5.1-alpine
+        Environment:
+        - Name: INFLUXDB_HTTP_AUTH_ENABLED
+          Value: "true"
+        - Name: INFLUXDB_ADMIN_USER
+          Value: root
+        LogConfiguration:
+          LogDriver: awslogs
+          Options:
+            awslogs-group: !Ref 'CloudWatchLogsGroup'
+            awslogs-region: !Ref 'AWS::Region'
+            awslogs-stream-prefix: influxdb
+        MountPoints:
+        - ContainerPath: /var/lib/influxdb
+          SourceVolume: influxdb-data
+        PortMappings:
+        - ContainerPort: 8086
+      Volumes:
+      - Name: influxdb-data
+        Host: 
+          SourcePath: /data/influxdb
+  InfluxDBService:
+    Type: AWS::ECS::Service
+    Properties:
+      Cluster: !Ref 'ECSCluster'
+      DesiredCount: 1
+      LoadBalancers:
+      - ContainerName: influxdb
+        ContainerPort: 8086
+        TargetGroupArn: !ImportValue 'InfluxDBTargetGroupARN'
+      Role: !Ref 'ECSServiceRole'
+      TaskDefinition: !Ref 'InfluxDBTask'
+  # Grafana
+  GrafanaTask:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+      - Name: grafana
+        MemoryReservation: 100
+        Essential: true
+        Image: grafana/grafana:5.0.3
+        Environment:
+        - Name: GF_SERVER_ROOT_URL
+          Value: !Sub
+          - https://grafana.${Domain}
+          - { Domain: !ImportValue DomainName }
+        - Name: GF_SERVER_PROTOCOL
+          Value: http
+        - Name: GF_SECURITY_ADMIN_USER
+          Value: root
+        - Name: GF_SECURITY_LOGIN_REMEMBER_DAYS
+          Value: 28
+        - Name: GF_SESSION_PROVIDER
+          Value: memory
+        LogConfiguration:
+          LogDriver: awslogs
+          Options:
+            awslogs-group: !Ref 'CloudWatchLogsGroup'
+            awslogs-region: !Ref 'AWS::Region'
+            awslogs-stream-prefix: grafana
+        MountPoints:
+        - ContainerPath: /var/lib/grafana
+          SourceVolume: grafana-data
+        PortMappings:
+        - ContainerPort: 3000
+      Volumes:
+      - Name: grafana-data
+        Host: 
+          SourcePath: /data/grafana
+  GrafanaService:
+    Type: AWS::ECS::Service
+    Properties:
+      Cluster: !Ref 'ECSCluster'
+      DesiredCount: 1
+      LoadBalancers:
+      - ContainerName: grafana
+        ContainerPort: 3000
+        TargetGroupArn: !ImportValue 'GrafanaTargetGroupARN'
+      Role: !Ref 'ECSServiceRole'
+      TaskDefinition: !Ref 'GrafanaTask'
+
+  ECSAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      VPCZoneIdentifier: !Split [ "," , !ImportValue 'SubnetList']
+      LaunchConfigurationName: !Ref 'ContainerInstances'
+      MinSize: 1
+      MaxSize: 1
+      DesiredCapacity: 1
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT15M
+    UpdatePolicy:
+      AutoScalingReplacingUpdate:
+        WillReplace: 'true'
+  ContainerInstances:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      ImageId: !FindInMap [AWSRegionToAMI, !Ref 'AWS::Region', AMIID]
+      SecurityGroups: [!Ref 'ECSSecurityGroup']
+      InstanceType: !Ref 'InstanceType'
+      IamInstanceProfile: !Ref 'EC2InstanceProfile'
+      KeyName: !Ref 'KeyName'
+      # BlockDeviceMappings:
+      #   - DeviceName: /dev/sda
+      #     Ebs:
+      #       DeleteOnTermination: true
+      #       Encrypted: false
+      #       VolumeSize: 30
+      #       VolumeType: gp2
+      UserData:
+        Fn::Base64: 
+          Fn::Sub: 
+            - |
+              #!/bin/bash -xe
+              echo ECS_CLUSTER=${ECSCluster} >> /etc/ecs/ecs.config
+              yum install -y aws-cfn-bootstrap nfs-utils
+              MOUNT_POINT=/data
+              mkdir -p $MOUNT_POINT
+              chown ec2-user:ec2-user $MOUNT_POINT
+              echo ${EFSDNSName}:/ $MOUNT_POINT nfs4 nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,_netdev 0 0 >> /etc/fstab
+              mount -a -t nfs4
+              curl -o telegraf.rpm https://dl.influxdata.com/telegraf/releases/telegraf-1.5.3-1.x86_64.rpm
+              yum localinstall -y telegraf.rpm
+              cat > /etc/telegraf/telegraf.conf <<- EOM
+              [agent]
+              interval = "60s"
+              [[outputs.influxdb]]
+              urls = ["https://influxdb.${Domain}:8086"]
+              database = "telegraf"
+              username = "telegraf"
+              password = "${InfluxDBTelegrafPassword}"
+              [[inputs.cpu]]
+              [[inputs.disk]]
+              ignore_fs = ["tmpfs", "devtmpfs", "devfs"]
+              [[inputs.diskio]]
+              [[inputs.docker]]
+              [[inputs.influxdb]]
+              urls = ["https://influxdb.${Domain}:8086/debug/vars"]
+              [[inputs.mem]]
+              [[inputs.net]]
+              [[inputs.swap]]
+              [[inputs.kernel]]
+              [[inputs.processes]]
+              [[inputs.system]]
+              [[inputs.netstat]]
+              EOM
+              service telegraf start
+              /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource ECSAutoScalingGroup --region ${AWS::Region}
+            - { EFSDNSName: !ImportValue EFSDNSName, Domain: !ImportValue DomainName }
+  ECSServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [ecs.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Path: /
+      Policies:
+      - PolicyName: ecs-service
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action: ['elasticloadbalancing:DeregisterInstancesFromLoadBalancer', 'elasticloadbalancing:DeregisterTargets',
+              'elasticloadbalancing:Describe*', 'elasticloadbalancing:RegisterInstancesWithLoadBalancer',
+              'elasticloadbalancing:RegisterTargets', 'ec2:Describe*', 'ec2:AuthorizeSecurityGroupIngress']
+            Resource: '*'
+  EC2Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [ec2.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Path: /
+      Policies:
+      - PolicyName: ecs-service
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action: ['ecs:CreateCluster', 'ecs:DeregisterContainerInstance', 'ecs:DiscoverPollEndpoint',
+              'ecs:Poll', 'ecs:RegisterContainerInstance', 'ecs:StartTelemetrySession',
+              'ecs:Submit*', 'logs:CreateLogStream', 'logs:PutLogEvents']
+            Resource: '*'
+          - Effect: Allow
+            Action: ['cloudwatch:Get*', 'cloudwatch:List*']
+            Resource: '*'
+  AutoscalingRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [application-autoscaling.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Path: /
+      Policies:
+      - PolicyName: service-autoscaling
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action: ['application-autoscaling:*', 'cloudwatch:DescribeAlarms', 'cloudwatch:PutMetricAlarm',
+              'ecs:DescribeServices', 'ecs:UpdateService']
+            Resource: '*'
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles: [!Ref 'EC2Role']
