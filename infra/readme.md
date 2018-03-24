@@ -1,53 +1,29 @@
-# VPC stack
+# Master stack
 
-## Create stack
+## Create 
 
-`aws cloudformation create-stack --stack-name p16-vpc --template-body file://vpc.yaml --parameters file://vpc-parameters.json`
+### Create S3 bucket
 
-## Create change set
+`aws s3 mb s3://p16-cfn`
 
-`aws cloudformation create-change-set --stack-name p16-vpc --template-body file://vpc.yaml --parameters file://vpc-parameters.json --change-set-name Foo`
+### Upload templates
 
-# EFS stack
+`aws s3 cp . s3://p16-cfn  --exclude '*' --include '*.yaml' --exclude 'master.yaml' --recursive`
 
-`aws cloudformation create-stack --stack-name p16-efs --template-body file://efs.yaml`
+### Create stack
 
-## Create change set
+`aws cloudformation create-stack --stack-name p16-master --template-body file://master.yaml --parameters file://master-parameters.json --capabilities CAPABILITY_IAM`
 
-`aws cloudformation create-change-set --stack-name p16-efs --template-body file://efs.yaml --change-set-name Foo`
+## Update
 
-# ALB stack
+### Create change set
 
-## Create stack
+`aws cloudformation create-change-set --stack-name p16-master --template-body file://master.yaml --parameters file://master-parameters.json --capabilities CAPABILITY_IAM --change-set-name Edit`
 
-`aws cloudformation create-stack --stack-name p16-alb --capabilities CAPABILITY_IAM --template-body file://alb.yaml --parameters file://alb-parameters.json`
+### View change set
 
-## Create change set
+`aws cloudformation describe-change-set --stack-name p16-master --change-set-name Edit`
 
-`aws cloudformation create-change-set --stack-name p16-alb --capabilities CAPABILITY_IAM --template-body file://alb.yaml --parameters file://alb-parameters.json --change-set-name Foo`
+### Apply change set
 
-# ECS stack
-
-## Create stack
-
-`aws cloudformation create-stack --stack-name p16-ecs --capabilities CAPABILITY_IAM --template-body file://ecs.yaml --parameters file://ecs-parameters.json`
-
-## Create change set
-
-`aws cloudformation create-change-set --stack-name p16-ecs --capabilities CAPABILITY_IAM --template-body file://ecs.yaml --parameters file://ecs-parameters.json --change-set-name Foo`
-
-# Route53 stack
-
-`aws cloudformation create-stack --stack-name p16-route53 --template-body file://route53.yaml --parameters file://route53-parameters.json`
-
-## Create change set
-
-`aws cloudformation create-change-set --stack-name p16-route53 --template-body file://route53.yaml --parameters file://route53-parameters.json --change-set-name Foo`
-
-# Cognito stack
-
-`aws cloudformation create-stack --stack-name p16-cognito --template-body file://cognito.yaml`
-
-## Create change set
-
-`aws cloudformation create-change-set --stack-name p16-route53 --template-body file://cognito.yaml --change-set-name Foo`
+`aws cloudformation execute-change-set --stack-name p16-master --change-set-name Edit`

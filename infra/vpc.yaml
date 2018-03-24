@@ -88,8 +88,6 @@ Resources:
     Properties:
       RouteTableId: !Ref RouteTable
       SubnetId: !Ref Subnet2
-
-
 Outputs:
   VPCid:
     Description: VPC resource id
