@@ -1,0 +1,38 @@
+{
+  "name": "jenergia-scrape",
+  "version": "0.0.1",
+  "description": "Jyväskylän Energia scraper",
+  "main": "main.js",
+  "scripts": {
+    "start": "babel-node src/main.js",
+    "prebuild": "rm -rf dist; mkdir dist",
+    "build": "webpack",
+    "predeploy": "npm run build && aws cloudformation package --template-file dist/aws-lambda.yaml --output-template-file serverless-output.yaml --s3-bucket p16-jenergia-scrape",
+    "deploy": "aws cloudformation deploy --template-file serverless-output.yaml --stack-name p16-jenergia-scrape --capabilities CAPABILITY_IAM"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "cheerio": "^1.0.0-rc.2",
+    "dotenv": "^4.0.0",
+    "fetch-cookie": "^0.7.0",
+    "form-data": "^2.3.1",
+    "influx": "^5.0.7",
+    "lodash": "^4.17.4",
+    "moment-timezone": "^0.5.14",
+    "node-fetch": "^1.7.3",
+    "winston": "^2.4.0"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.0.0-beta.36",
+    "@babel/core": "^7.0.0-beta.36",
+    "@babel/node": "^7.0.0-beta.36",
+    "@babel/polyfill": "^7.0.0-beta.36",
+    "babel-loader": "^8.0.0-beta.0",
+    "babel-preset-aws-lambda": "^1.0.2",
+    "babel-preset-env": "2.0.0-alpha.20",
+    "copy-webpack-plugin": "^4.3.1",
+    "webpack": "^3.10.0",
+    "webpack-node-externals": "^1.6.0"
+  }
+}

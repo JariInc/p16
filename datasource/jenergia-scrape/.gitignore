@@ -1,0 +1,5 @@
+node_modules
+.env
+dist
+serverless-output.yaml
+aws-lambda.yaml

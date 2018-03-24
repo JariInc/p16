@@ -1,0 +1,39 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Resources:
+  cron:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: main.handler
+      Runtime: nodejs6.10
+      Timeout: 300
+      MemorySize: 128
+      Policies: 
+        - AWSLambdaVPCAccessExecutionRole
+      Events: 
+        RunScrape:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 3 * * ? *)
+      VpcConfig:
+        SecurityGroupIds:
+        - sg-xxxxxxxx
+        SubnetIds:
+        - subnet-xxxxxxxx
+        - subnet-xxxxxxxx
+        - subnet-xxxxxxxx
+      Environment:
+        Variables: 
+          JENERGIA_USERNAME: 
+          JENERGIA_PASSWORD: 
+          JENERGIA_CUSTOMER_CODE: 
+          JENERGIA_NETWORK_CODE: 
+          JENERGIA_METERING_POINT_CODE: 
+          LOG_LEVEL: info
+          LOG_COLORS: false
+          INFLUX_HOST: 
+          INFLUX_USER: 
+          INFLUX_PASSWORD: 
+          INFLUX_DATABASE: 
+          INFLUX_PORT: 
+          INFLUX_PROTOCOL: 
