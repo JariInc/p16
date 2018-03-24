@@ -1,0 +1,61 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: p16 master stack
+Parameters:
+  TemplateBucket:
+    Description: Name of the S3 bucket where templates are stored
+    Type: String
+  ALBCertificateArn:
+    Description: ARN for ACM certificate to be used in load balancer
+    Type: String
+  EC2SSHKey:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the ECS instances.
+  InfluxDBTelegrafPassword:
+    Type: String
+    Description: InfluxDB password for telegraf-user
+  DomainValidataionSubdomain:
+    Type: String
+    Description: Subdomain for validating ACM certificate
+  DomainValidataionCNAME:
+    Type: String
+    Description: Target CNAME for ACM certificate validation
+Resources:
+  VPCStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub 'https://s3-eu-west-1.amazonaws.com/${TemplateBucket}/vpc.yaml'
+  EFSStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+      - VPCStack
+    Properties:
+      TemplateURL: !Sub 'https://s3-eu-west-1.amazonaws.com/${TemplateBucket}/efs.yaml'
+  ALBStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+      - VPCStack
+    Properties:
+      TemplateURL: !Sub 'https://s3-eu-west-1.amazonaws.com/${TemplateBucket}/alb.yaml'
+      Parameters:
+        ALBCertificateArn: !Ref ALBCertificateArn
+  ECSStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: 
+      - Route53Stack
+      - ALBStack
+      - VPCStack
+    Properties:
+      TemplateURL: !Sub 'https://s3-eu-west-1.amazonaws.com/${TemplateBucket}/ecs.yaml'
+      Parameters:
+        KeyName: !Ref EC2SSHKey
+        InfluxDBTelegrafPassword: !Ref InfluxDBTelegrafPassword
+  Route53Stack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+      - ALBStack
+    Properties:
+      TemplateURL: !Sub 'https://s3-eu-west-1.amazonaws.com/${TemplateBucket}/route53.yaml'
+      Parameters:
+        ACMValidationSubdomain: !Ref DomainValidataionSubdomain
+        ACMValidationCNAME: !Ref DomainValidataionCNAME

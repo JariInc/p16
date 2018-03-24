@@ -6,7 +6,7 @@ Parameters:
     Description: Name of an existing EC2 KeyPair to enable SSH access to the ECS instances.
   InfluxDBTelegrafPassword:
     Type: String
-    Description: InfluxDB password for telegfaf user
+    Description: InfluxDB password for telegraf-user
   InstanceType:
     Description: EC2 instance type
     Type: String
@@ -61,7 +61,7 @@ Resources:
       - Name: influxdb
         MemoryReservation: 300
         Essential: true
-        Image: influxdb:1.5.0-alpine
+        Image: influxdb:1.5.1-alpine
         Environment:
         - Name: INFLUXDB_HTTP_AUTH_ENABLED
           Value: "true"
@@ -164,6 +164,13 @@ Resources:
       InstanceType: !Ref 'InstanceType'
       IamInstanceProfile: !Ref 'EC2InstanceProfile'
       KeyName: !Ref 'KeyName'
+      # BlockDeviceMappings:
+      #   - DeviceName: /dev/sda
+      #     Ebs:
+      #       DeleteOnTermination: true
+      #       Encrypted: false
+      #       VolumeSize: 30
+      #       VolumeType: gp2
       UserData:
         Fn::Base64: 
           Fn::Sub: 
