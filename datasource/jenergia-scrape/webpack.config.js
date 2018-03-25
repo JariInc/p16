@@ -18,7 +18,13 @@ module.exports = {
       use: {
         loader: 'babel-loader',
         options: {
-          presets: ['aws-lambda']
+          "presets": [
+            ["@babel/preset-env", {
+              "targets": {
+                "node": "6.10"
+              }
+            }]
+          ]
         }
       }
     }],
