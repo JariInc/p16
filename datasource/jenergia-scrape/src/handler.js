@@ -4,7 +4,7 @@ import fetchData from './fetch';
 import parseData from './parse';
 import { getLatestTimestamp, saveDataPoints } from './database';
 
-export default async function(event, context, callback) {
+export async function handler(event, context, callback) {
   logger.info('jenergia-scrape started');
 
   const data = fetchData();
