@@ -43,7 +43,7 @@ async function login(url, token) {
 
     return response.text;
   } catch (error) {
-    logger.error(error.response.error);    
+    logger.error(error);    
     process.exit(1);
   }
 }
@@ -65,11 +65,9 @@ async function fetchReport() {
 
     logger.debug('Fetched report with status', response.status);
     
-    //logger.debug(response);
-
     return response.body;
   } catch (error) {
-    logger.error(error.response.error);    
+    logger.error(error);    
     process.exit(1);
   }
 }

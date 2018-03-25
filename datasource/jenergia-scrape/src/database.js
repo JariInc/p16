@@ -79,7 +79,13 @@ export async function getLatestTimestamp() {
     ORDER BY time DESC
        LIMIT 1
     `).then(result => {
-      return moment(result.pop().time.getNanoTime() / 1000000)
+      const item = result.pop();
+
+      if(item) {
+        return moment(item.time.getNanoTime() / 1000000);
+      } else {
+        return moment('1970-01-01');
+      }
     });
   });
 
